@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -187,4 +188,52 @@ func (c LightServeConfiguration) UploadData(data []LightcurveDatapoint, cutouts 
 		}
 
 	}
+}
+
+// Upload a parquet file that we just made to the API. Does not
+// currently support uploading of cutouts.
+func (c LightServeConfiguration) UploadParquet(filename string) error {
+	url := fmt.Sprintf("%s/observations/parquet", c.host)
+	client := c.GetClient()
+
+	log.Printf("Attempting to upload parquet file %s to %s", filename, url)
+
+	f, err := os.Open(filename)
+	if err != nil {
+		log.Panic("Unable to open file", filename)
+	}
+	defer f.Close()
+
+	stat, err := f.Stat()
+	if err != nil {
+		log.Panic("Unable to stat file", stat)
+	}
+	filesize := stat.Size()
+
+	request, err := http.NewRequest(
+		http.MethodPut,
+		url,
+		f,
+	)
+
+	if err != nil {
+		log.Panic("Error creating HTTP request")
+	}
+
+	request.ContentLength = filesize
+	request.Header.Set("Content-Type", "application/octet-stream")
+
+	res, err := client.Do(request)
+
+	if err != nil {
+		log.Println("Failed to send data to /observations/parquet endpoint ", res)
+	}
+
+	status_code := res.StatusCode
+
+	if status_code != 200 {
+		log.Printf("Error uploading data: %d", status_code)
+	}
+
+	return err
 }

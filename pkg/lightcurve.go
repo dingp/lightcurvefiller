@@ -63,16 +63,16 @@ type Lightcurve struct {
 }
 
 type LightcurveDatapoint struct {
-	Frequency      int       `json:"frequency" parquet:"name=frequency"`
-	Module         string    `json:"module" parquet:"name=module"`
-	SourceID       uuid.UUID `json:"source_id" parquet:"name=source_id"`
-	Time           time.Time `json:"time" parquet:"name=time"`
-	Ra             float64   `json:"ra" parquet:"name=ra"`
-	Dec            float64   `json:"dec" parquet:"name=dec"`
-	RaUncertainty  float64   `json:"ra_uncertainty" parquet:"name=ra_uncertainty"`
-	DecUncertainty float64   `json:"dec_uncertainty" parquet:"name=dec_uncertainty"`
-	Flux           float64   `json:"flux" parquet:"name=flux"`
-	FluxErr        float64   `json:"flux_err" parquet:"name=flux_err"`
+	Frequency      int       `json:"frequency" parquet:"frequency"`
+	Module         string    `json:"module" parquet:"module"`
+	SourceID       uuid.UUID `json:"source_id" parquet:"source_id"`
+	Time           time.Time `json:"time" parquet:"time"`
+	Ra             float64   `json:"ra" parquet:"ra"`
+	Dec            float64   `json:"dec" parquet:"dec"`
+	RaUncertainty  float64   `json:"ra_uncertainty" parquet:"ra_uncertainty"`
+	DecUncertainty float64   `json:"dec_uncertainty" parquet:"dec_uncertainty"`
+	Flux           float64   `json:"flux" parquet:"flux"`
+	FluxErr        float64   `json:"flux_err" parquet:"flux_err"`
 }
 
 func NewLightcurve(configuration LightcurveConfiguration) Lightcurve {
