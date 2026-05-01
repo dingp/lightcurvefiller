@@ -219,6 +219,7 @@ func ReadLightserveConfigFromEnvironment() LightServeConfiguration {
 		host:              readStringEnv("LIGHTSERVE_HOST", "http://localhost:8001"),
 		batch_size:        readIntEnv("LIGHTSERVE_BATCH_SIZE", 2048),
 		use_bearer:        readBoolEnv("LIGHTSERVE_USE_BEARER", false),
+		use_parquet:       readBoolEnv("LIGHTSERVE_USE_PARQUET", false),
 		bearer:            readStringEnv("LIGHTSERVE_BEARER_TOKEN", ""),
 		allow_self_signed: readBoolEnv("LIGHTSERVE_ALLOW_SELF_SIGNED", false),
 		enable:            readBoolEnv("LIGHTSERVE_ENABLE", true),
@@ -241,8 +242,14 @@ func (s LightServeConfiguration) Print() {
 		enable_string = "yes"
 	}
 
+	parquet_string := "no"
+	if s.use_parquet {
+		parquet_string = "yes"
+	}
+
 	fmt.Printf("LIGHTSERVE_HOST=%s\n", s.host)
 	fmt.Printf("LIGHTSERVE_BATCH_SIZE=%d\n", s.batch_size)
+	fmt.Printf("LIGHTSERVE_USE_PARQUET=%s\n", parquet_string)
 	fmt.Printf("LIGHTSERVE_USE_BEARER=%s\n", bearer_string)
 	fmt.Printf("LIGHTSERVE_BEARER_TOKEN=%s\n", s.bearer)
 	fmt.Printf("LIGHTSERVE_ALLOW_SELF_SIGNED=%s\n", self_signed_string)

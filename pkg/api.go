@@ -15,6 +15,7 @@ import (
 type LightServeConfiguration struct {
 	host              string // Hostname (including port) of lightgest server
 	batch_size        int    // Size of batches to upload data in
+	use_parquet       bool   // Whether to upload using parquet
 	use_bearer        bool   // Whether to use the Bearer token
 	bearer            string // Bearer token (only used if use_bearer)
 	allow_self_signed bool   // Whether to allow self-signed certificates
