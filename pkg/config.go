@@ -216,12 +216,13 @@ func (c CutoutConfiguration) Print() {
 
 func ReadLightserveConfigFromEnvironment() LightServeConfiguration {
 	return LightServeConfiguration{
-		host:              readStringEnv("LIGHTSERVE_HOST", "http://localhost:8001"),
-		batch_size:        readIntEnv("LIGHTSERVE_BATCH_SIZE", 2048),
-		use_bearer:        readBoolEnv("LIGHTSERVE_USE_BEARER", false),
-		bearer:            readStringEnv("LIGHTSERVE_BEARER_TOKEN", ""),
-		allow_self_signed: readBoolEnv("LIGHTSERVE_ALLOW_SELF_SIGNED", false),
-		enable:            readBoolEnv("LIGHTSERVE_ENABLE", true),
+		host:               readStringEnv("LIGHTSERVE_HOST", "http://localhost:8001"),
+		batch_size:         readIntEnv("LIGHTSERVE_BATCH_SIZE", 2048),
+		use_bearer:         readBoolEnv("LIGHTSERVE_USE_BEARER", false),
+		bearer:             readStringEnv("LIGHTSERVE_BEARER_TOKEN", ""),
+		allow_self_signed:  readBoolEnv("LIGHTSERVE_ALLOW_SELF_SIGNED", false),
+		enable:             readBoolEnv("LIGHTSERVE_ENABLE", true),
+		upload_instruments: readBoolEnv("LIGHTSERVE_UPLOAD_INSTRUMENTS", true),
 	}
 }
 
@@ -241,12 +242,23 @@ func (s LightServeConfiguration) Print() {
 		enable_string = "yes"
 	}
 
+	bearer_token_string := ""
+	if s.bearer != "" {
+		bearer_token_string = "<set>"
+	}
+
+	upload_instruments_string := "no"
+	if s.upload_instruments {
+		upload_instruments_string = "yes"
+	}
+
 	fmt.Printf("LIGHTSERVE_HOST=%s\n", s.host)
 	fmt.Printf("LIGHTSERVE_BATCH_SIZE=%d\n", s.batch_size)
 	fmt.Printf("LIGHTSERVE_USE_BEARER=%s\n", bearer_string)
-	fmt.Printf("LIGHTSERVE_BEARER_TOKEN=%s\n", s.bearer)
+	fmt.Printf("LIGHTSERVE_BEARER_TOKEN=%s\n", bearer_token_string)
 	fmt.Printf("LIGHTSERVE_ALLOW_SELF_SIGNED=%s\n", self_signed_string)
 	fmt.Printf("LIGHTSERVE_ENABLE=%s\n", enable_string)
+	fmt.Printf("LIGHTSERVE_UPLOAD_INSTRUMENTS=%s\n", upload_instruments_string)
 }
 
 func ReadParquetConfiguration() ParquetConfiguration {
@@ -340,12 +352,14 @@ func (c LightcurveFillerConfig) Run() {
 
 	// Upload necessary metadata to lightserve
 	if c.Lightserve.enable {
-		before_upload_instruments := time.Now()
-		c.Lightserve.UploadInstruments(c.Campaign.Telescope)
-		log.Printf(
-			"Successfully uploaded telescope information, took %d ms\n",
-			time.Since(before_upload_instruments).Milliseconds(),
-		)
+		if c.Lightserve.upload_instruments {
+			before_upload_instruments := time.Now()
+			c.Lightserve.UploadInstruments(c.Campaign.Telescope)
+			log.Printf(
+				"Successfully uploaded telescope information, took %d ms\n",
+				time.Since(before_upload_instruments).Milliseconds(),
+			)
+		}
 		before_upload_sources := time.Now()
 		c.Lightserve.UploadSources(lightcurves)
 		log.Printf(

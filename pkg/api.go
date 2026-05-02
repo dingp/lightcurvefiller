@@ -12,12 +12,13 @@ import (
 
 // Configuration for API connections to the Lightgest server
 type LightServeConfiguration struct {
-	host              string // Hostname (including port) of lightgest server
-	batch_size        int    // Size of batches to upload data in
-	use_bearer        bool   // Whether to use the Bearer token
-	bearer            string // Bearer token (only used if use_bearer)
-	allow_self_signed bool   // Whether to allow self-signed certificates
-	enable            bool   // Whether to actually upload things to lightserve
+	host               string // Hostname (including port) of lightgest server
+	batch_size         int    // Size of batches to upload data in
+	use_bearer         bool   // Whether to use the Bearer token
+	bearer             string // Bearer token (only used if use_bearer)
+	allow_self_signed  bool   // Whether to allow self-signed certificates
+	enable             bool   // Whether to actually upload things to lightserve
+	upload_instruments bool   // Whether to upload telescope/instrument metadata
 }
 
 type InstrumentUploadDetails struct {
