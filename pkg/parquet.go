@@ -17,7 +17,7 @@ type ParquetConfiguration struct {
 }
 
 // Write the day's data to a single parquet file.
-func (p ParquetConfiguration) WriteData(data []LightcurveDatapoint, date time.Time) error {
+func (p ParquetConfiguration) WriteData(data []LightcurveDatapoint, date time.Time) (string, error) {
 	filename := path.Join(p.base_path, fmt.Sprintf("%s.parquet", date.Format(time.DateOnly)))
 
 	log.Printf("Writing parquet file to %s", filename)
@@ -30,5 +30,5 @@ func (p ParquetConfiguration) WriteData(data []LightcurveDatapoint, date time.Ti
 
 	err := parquet.WriteFile(filename, data, options...)
 
-	return err
+	return filename, err
 }

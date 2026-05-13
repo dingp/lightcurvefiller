@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"time"
@@ -15,7 +17,7 @@ import (
 type LightServeConfiguration struct {
 	host              string // Hostname (including port) of lightgest server
 	batch_size        int    // Size of batches to upload data in
-	use_parquet       bool   // Whether to upload using parquet
+	upload_parquet    bool   // Whether to upload using parquet
 	use_bearer        bool   // Whether to use the Bearer token
 	bearer            string // Bearer token (only used if use_bearer)
 	allow_self_signed bool   // Whether to allow self-signed certificates
@@ -72,7 +74,7 @@ func (c LightServeConfiguration) UploadSources(lightcurves []Lightcurve) {
 		res, err := client.Do(request)
 
 		if err != nil || res.StatusCode != 200 {
-			log.Panic("Failed to send data to /sources/batch endpoint ", res)
+			log.Println("Failed to send data to /sources/batch endpoint ", res)
 		}
 	}
 }
@@ -122,7 +124,7 @@ func (c LightServeConfiguration) UploadInstruments(telescope Telescope) {
 		res, err := client.Do(request)
 
 		if err != nil || res.StatusCode != 200 {
-			log.Panic("Failed to send data to /instruments/ endpoint ", res, err)
+			log.Println("Failed to send data to /instruments/ endpoint ", res, err)
 		}
 	}
 }
@@ -199,31 +201,37 @@ func (c LightServeConfiguration) UploadParquet(filename string) error {
 
 	log.Printf("Attempting to upload parquet file %s to %s", filename, url)
 
-	f, err := os.Open(filename)
+	contents, err := os.ReadFile(filename)
 	if err != nil {
 		log.Panic("Unable to open file", filename)
 	}
-	defer f.Close()
 
-	stat, err := f.Stat()
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	part, err := writer.CreateFormFile("file", "upload.parquet")
+
 	if err != nil {
-		log.Panic("Unable to stat file", stat)
+		log.Panic("Failed to create writer form file")
 	}
-	filesize := stat.Size()
+
+	part.Write(contents)
+
+	if err := writer.Close(); err != nil {
+		return err
+	}
 
 	request, err := http.NewRequest(
-		http.MethodPut,
+		http.MethodPost,
 		url,
-		f,
+		&buf,
 	)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
 
 	if err != nil {
 		log.Panic("Error creating HTTP request")
 	}
 
-	request.ContentLength = filesize
-	request.Header.Set("Content-Type", "application/octet-stream")
-
+	log.Printf("Header Content-Type: %s", request.Header.Get("Content-Type"))
 	res, err := client.Do(request)
 
 	if err != nil {
@@ -233,7 +241,11 @@ func (c LightServeConfiguration) UploadParquet(filename string) error {
 	status_code := res.StatusCode
 
 	if status_code != 200 {
-		log.Printf("Error uploading data: %d", status_code)
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		log.Printf("Error uploading data: %d, %s\n", status_code, body)
 	}
 
 	return err

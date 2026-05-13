@@ -62,7 +62,11 @@ type Lightcurve struct {
 	Name           string `json:"name"`
 }
 
+type ExtraData struct {
+}
+
 type LightcurveDatapoint struct {
+	MeasurementID  uuid.UUID `json:"measurement_id" parquet:"measurement_id"`
 	Frequency      int       `json:"frequency" parquet:"frequency"`
 	Module         string    `json:"module" parquet:"module"`
 	SourceID       uuid.UUID `json:"source_id" parquet:"source_id"`
@@ -73,6 +77,7 @@ type LightcurveDatapoint struct {
 	DecUncertainty float64   `json:"dec_uncertainty" parquet:"dec_uncertainty"`
 	Flux           float64   `json:"flux" parquet:"flux"`
 	FluxErr        float64   `json:"flux_err" parquet:"flux_err"`
+	// Extra          ExtraData `json:"extra" parquet:"extra"`
 }
 
 func NewLightcurve(configuration LightcurveConfiguration) Lightcurve {
@@ -115,6 +120,7 @@ func (l Lightcurve) GenerateDataPoint(t time.Time, m Module) [2]LightcurveDatapo
 
 	return [2]LightcurveDatapoint{
 		{
+			MeasurementID:  uuid.New(),
 			SourceID:       l.SourceID,
 			Time:           t,
 			Frequency:      m.Frequencies[0],
@@ -127,6 +133,7 @@ func (l Lightcurve) GenerateDataPoint(t time.Time, m Module) [2]LightcurveDatapo
 			FluxErr:        RandomFloatBetween(0.5*l.scatter, l.scatter),
 		},
 		{
+			MeasurementID:  uuid.New(),
 			SourceID:       l.SourceID,
 			Time:           t,
 			Frequency:      m.Frequencies[1],
