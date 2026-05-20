@@ -223,6 +223,7 @@ func ReadLightserveConfigFromEnvironment() LightServeConfiguration {
 		bearer:            readStringEnv("LIGHTSERVE_BEARER_TOKEN", ""),
 		allow_self_signed: readBoolEnv("LIGHTSERVE_ALLOW_SELF_SIGNED", false),
 		enable:            readBoolEnv("LIGHTSERVE_ENABLE", true),
+		number_of_workers: readIntEnv("LIGHTSERVE_NUMBER_OF_WORKERS", 1),
 	}
 }
 
@@ -254,6 +255,7 @@ func (s LightServeConfiguration) Print() {
 	fmt.Printf("LIGHTSERVE_BEARER_TOKEN=%s\n", s.bearer)
 	fmt.Printf("LIGHTSERVE_ALLOW_SELF_SIGNED=%s\n", self_signed_string)
 	fmt.Printf("LIGHTSERVE_ENABLE=%s\n", enable_string)
+	fmt.Printf("LIGHTSERVE_NUMBER_OF_WORKERS=%d\n", s.number_of_workers)
 }
 
 func ReadParquetConfiguration() ParquetConfiguration {

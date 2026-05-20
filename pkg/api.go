@@ -22,6 +22,7 @@ type LightServeConfiguration struct {
 	bearer            string // Bearer token (only used if use_bearer)
 	allow_self_signed bool   // Whether to allow self-signed certificates
 	enable            bool   // Whether to actually upload things to lightserve
+	number_of_workers int    // Number of upload workers for 'actual' data
 }
 
 type InstrumentUploadDetails struct {
@@ -129,29 +130,33 @@ func (c LightServeConfiguration) UploadInstruments(telescope Telescope) {
 	}
 }
 
-// Upload data to the Lightgest API in batches.
-// We always use the batch endpoint, it is much faster.
-func (c LightServeConfiguration) UploadData(data []LightcurveDatapoint, cutouts []Cutout) {
-	number_of_batches := int(math.Ceil(float64(len(data)) / float64(c.batch_size)))
-	url := fmt.Sprintf("%s/observations/batch", c.host)
-	client := c.GetClient()
-
-	for batch := range number_of_batches {
-		start_batch := batch * c.batch_size
-		end_batch := min((batch+1)*c.batch_size, len(data))
+func uploadBatch(
+	data *[]LightcurveDatapoint,
+	cutouts *[]Cutout,
+	batch_size int,
+	url string,
+	client *http.Client,
+	batch_id <-chan int,
+	return_code chan<- int,
+) {
+	for batch := range batch_id {
+		start_batch := batch * batch_size
+		end_batch := min((batch+1)*batch_size, len(*data))
 
 		var batched_cutouts []Cutout
 
 		if cutouts != nil {
-			batched_cutouts = cutouts[start_batch:end_batch]
+			batched_cutouts = (*cutouts)[start_batch:end_batch]
 		} else {
 			batched_cutouts = nil
 		}
 
-		json_batch, err := json.Marshal(DataUpload{
-			FluxMeasurements: data[start_batch:end_batch],
+		data_upload := DataUpload{
+			FluxMeasurements: (*data)[start_batch:end_batch],
 			Cutouts:          batched_cutouts,
-		})
+		}
+
+		json_batch, err := json.Marshal(data_upload)
 
 		if err != nil {
 			log.Panic("Could not marshal lightcurve data to JSON")
@@ -190,6 +195,35 @@ func (c LightServeConfiguration) UploadData(data []LightcurveDatapoint, cutouts 
 			}
 		}
 
+		// Return the return code to create a dependency (otherwise we don't wait for these to finish!)
+		return_code <- status_code
+	}
+}
+
+// Upload data to the Lightgest API in batches.
+// We always use the batch endpoint, it is much faster.
+// We upload data using goroutines in parallel.
+func (c LightServeConfiguration) UploadData(data []LightcurveDatapoint, cutouts []Cutout) {
+	number_of_batches := int(math.Ceil(float64(len(data)) / float64(c.batch_size)))
+	log.Printf("Uploading using %d batches\n", number_of_batches)
+	url := fmt.Sprintf("%s/observations/batch", c.host)
+	client := c.GetClient()
+
+	batch_ids := make(chan int, number_of_batches)
+	return_codes := make(chan int, number_of_batches)
+
+	for w := 1; w <= c.number_of_workers; w++ {
+		go uploadBatch(&data, &cutouts, c.batch_size, url, client, batch_ids, return_codes)
+	}
+
+	for batch := range number_of_batches {
+		batch_ids <- batch
+	}
+
+	close(batch_ids)
+
+	for range number_of_batches {
+		<-return_codes
 	}
 }
 
