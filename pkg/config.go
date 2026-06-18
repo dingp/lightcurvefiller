@@ -216,13 +216,15 @@ func (c CutoutConfiguration) Print() {
 
 func ReadLightserveConfigFromEnvironment() LightServeConfiguration {
 	return LightServeConfiguration{
-		host:               readStringEnv("LIGHTSERVE_HOST", "http://localhost:8001"),
-		batch_size:         readIntEnv("LIGHTSERVE_BATCH_SIZE", 2048),
-		use_bearer:         readBoolEnv("LIGHTSERVE_USE_BEARER", false),
-		bearer:             readStringEnv("LIGHTSERVE_BEARER_TOKEN", ""),
-		allow_self_signed:  readBoolEnv("LIGHTSERVE_ALLOW_SELF_SIGNED", false),
-		enable:             readBoolEnv("LIGHTSERVE_ENABLE", true),
-		upload_instruments: readBoolEnv("LIGHTSERVE_UPLOAD_INSTRUMENTS", true),
+  	host:              readStringEnv("LIGHTSERVE_HOST", "http://localhost:8001"),
+		batch_size:        readIntEnv("LIGHTSERVE_BATCH_SIZE", 2048),
+		use_bearer:        readBoolEnv("LIGHTSERVE_USE_BEARER", false),
+		upload_parquet:    readBoolEnv("LIGHTSERVE_UPLOAD_PARQUET", false),
+		bearer:            readStringEnv("LIGHTSERVE_BEARER_TOKEN", ""),
+		allow_self_signed: readBoolEnv("LIGHTSERVE_ALLOW_SELF_SIGNED", false),
+		enable:            readBoolEnv("LIGHTSERVE_ENABLE", true),
+		number_of_workers: readIntEnv("LIGHTSERVE_NUMBER_OF_WORKERS", 1),
+    upload_instruments: readBoolEnv("LIGHTSERVE_UPLOAD_INSTRUMENTS", true),
 	}
 }
 
@@ -250,15 +252,20 @@ func (s LightServeConfiguration) Print() {
 	upload_instruments_string := "no"
 	if s.upload_instruments {
 		upload_instruments_string = "yes"
+	parquet_string := "no"
+	if s.upload_parquet {
+		parquet_string = "yes"
 	}
 
 	fmt.Printf("LIGHTSERVE_HOST=%s\n", s.host)
 	fmt.Printf("LIGHTSERVE_BATCH_SIZE=%d\n", s.batch_size)
+	fmt.Printf("LIGHTSERVE_UPLOAD_PARQUET=%s\n", parquet_string)
 	fmt.Printf("LIGHTSERVE_USE_BEARER=%s\n", bearer_string)
 	fmt.Printf("LIGHTSERVE_BEARER_TOKEN=%s\n", bearer_token_string)
 	fmt.Printf("LIGHTSERVE_ALLOW_SELF_SIGNED=%s\n", self_signed_string)
 	fmt.Printf("LIGHTSERVE_ENABLE=%s\n", enable_string)
 	fmt.Printf("LIGHTSERVE_UPLOAD_INSTRUMENTS=%s\n", upload_instruments_string)
+	fmt.Printf("LIGHTSERVE_NUMBER_OF_WORKERS=%d\n", s.number_of_workers)
 }
 
 func ReadParquetConfiguration() ParquetConfiguration {
@@ -402,7 +409,7 @@ func (c LightcurveFillerConfig) Run() {
 
 		if c.Parquet.enable {
 			before_parquet := time.Now()
-			err := c.Parquet.WriteData(observations, internal_time)
+			filename, err := c.Parquet.WriteData(observations, internal_time)
 			time_to_parquet := time.Since(before_parquet)
 			log.Printf(
 				"Wrote parquet data to disk for time %s (took %d ms)\n",
@@ -413,9 +420,26 @@ func (c LightcurveFillerConfig) Run() {
 			if err != nil {
 				log.Printf("Unable to write parquet file\n")
 			}
+
+			if c.Lightserve.enable && c.Lightserve.upload_parquet {
+				before_parquet_upload := time.Now()
+				err = c.Lightserve.UploadParquet(filename)
+				time_to_upload := time.Since(before_parquet_upload)
+
+				log.Printf(
+					"Uploaded data as parquet file (%d) for time %s (took %d ms)\n",
+					len(observations),
+					internal_time.Format(time.DateOnly),
+					time_to_upload.Milliseconds(),
+				)
+
+				if err != nil {
+					log.Printf("Failed to upload data to parquet endpoint\n")
+				}
+			}
 		}
 
-		if c.Lightserve.enable {
+		if c.Lightserve.enable && !c.Lightserve.upload_parquet {
 			before_upload := time.Now()
 			c.Lightserve.UploadData(observations, cutouts)
 			time_to_upload := time.Since(before_upload)

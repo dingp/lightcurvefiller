@@ -22,7 +22,9 @@ func (t *HeaderTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context())
 
 	for k, v := range t.Headers {
-		req.Header.Set(k, v)
+		if req.Header.Get(k) == "" {
+			req.Header.Set(k, v)
+		}
 	}
 
 	return t.base().RoundTrip(req)

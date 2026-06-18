@@ -1,3 +1,7 @@
 main
 *.log
 .env
+*.parquet
+*.swp
+env-parquet
+.vscode/*

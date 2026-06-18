@@ -19,12 +19,13 @@ type CutoutConfiguration struct {
 }
 
 type Cutout struct {
-	Data      [CUTOUT_SIZE][CUTOUT_SIZE]float64 `json:"data"`
-	Time      time.Time                         `json:"time"`
-	Units     string                            `json:"units"`
-	Frequency int                               `json:"frequency"`
-	Module    string                            `json:"module"`
-	SourceID  uuid.UUID                         `json:"source_id"`
+	MeasurementID uuid.UUID                         `json:"measurement_id"`
+	Data          [CUTOUT_SIZE][CUTOUT_SIZE]float64 `json:"data"`
+	Time          time.Time                         `json:"time"`
+	Units         string                            `json:"units"`
+	Frequency     int                               `json:"frequency"`
+	Module        string                            `json:"module"`
+	SourceID      uuid.UUID                         `json:"source_id"`
 }
 
 // Generate sample beams for the LAT
@@ -62,11 +63,12 @@ func (c CutoutConfiguration) GenerateCutout(measurement LightcurveDatapoint) Cut
 	}
 
 	return Cutout{
-		Data:      output,
-		Time:      measurement.Time,
-		Units:     c.units,
-		Frequency: measurement.Frequency,
-		Module:    measurement.Module,
-		SourceID:  measurement.SourceID,
+		MeasurementID: measurement.MeasurementID,
+		Data:          output,
+		Time:          measurement.Time,
+		Units:         c.units,
+		Frequency:     measurement.Frequency,
+		Module:        measurement.Module,
+		SourceID:      measurement.SourceID,
 	}
 }
